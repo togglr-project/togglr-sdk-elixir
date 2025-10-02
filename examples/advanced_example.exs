@@ -1,22 +1,28 @@
 #!/usr/bin/env elixir
 
-# Advanced example of using Togglr SDK with custom configuration
+# Advanced example of using Togglr SDK
 # Run with: elixir examples/advanced_example.exs
 
 defmodule AdvancedExample do
   @moduledoc """
-  Advanced example demonstrating Togglr SDK with custom configuration,
-  logging, metrics, and error handling.
+  Advanced example demonstrating comprehensive Togglr SDK usage including
+  error reporting and feature health monitoring.
   """
 
   def main do
     IO.puts("=== Togglr SDK Advanced Example ===")
 
-    # Create a client with custom configuration
-    case create_custom_client() do
+    # Create a client with advanced configuration
+    config = TogglrSdk.Config.default("your-api-key")
+    |> TogglrSdk.Config.with_base_url("http://localhost:8090")
+    |> TogglrSdk.Config.with_timeout(60000)
+    |> TogglrSdk.Config.with_retries(5)
+    |> TogglrSdk.Config.with_cache(true, 2000, 120)
+
+    case TogglrSdk.Client.new(config) do
       {:ok, client} ->
         try do
-          run_advanced_example(client)
+          run_example(client)
         after
           # Clean up resources
           TogglrSdk.Client.close(client)
@@ -27,171 +33,107 @@ defmodule AdvancedExample do
     end
   end
 
-  defp create_custom_client do
-    # Create custom backoff configuration
-    backoff = TogglrSdk.BackoffConfig.new(0.5, 10.0, 1.5)
+  defp run_example(client) do
+    # Create a context with user information
+    context = TogglrSdk.RequestContext.new()
+    |> TogglrSdk.RequestContext.with_user_id("456")
+    |> TogglrSdk.RequestContext.with_country("CA")
+    |> TogglrSdk.RequestContext.with_user_email("user@example.ca")
+    |> TogglrSdk.RequestContext.set("subscription", "premium")
+    |> TogglrSdk.RequestContext.set("region", "north")
 
-    # Create custom configuration
-    config = TogglrSdk.Config.default("your-api-key")
-    |> TogglrSdk.Config.with_base_url("https://api.togglr.com")
-    |> TogglrSdk.Config.with_timeout(60000)
-    |> TogglrSdk.Config.with_retries(5)
-    |> TogglrSdk.Config.with_backoff(backoff)
-    |> TogglrSdk.Config.with_cache(true, 2000, 120)
-    |> TogglrSdk.Config.with_logger(Logger)
+    IO.puts("Context: #{inspect(TogglrSdk.RequestContext.to_map(context))}")
 
-    TogglrSdk.Client.new(config)
-  end
+    feature_key = "advanced_analytics"
 
-  defp run_advanced_example(client) do
-    # Health check
-    case TogglrSdk.Client.health_check(client) do
-      {:ok, true} ->
-        IO.puts("API is healthy")
-      {:ok, false} ->
-        IO.puts("API is not healthy, exiting")
-        return
+    # Evaluate feature
+    IO.puts("\n=== Feature Evaluation ===")
+    case TogglrSdk.Client.evaluate(client, feature_key, context) do
+      {:ok, result} ->
+        IO.puts("Feature evaluation result:")
+        IO.puts("  Found: #{result.found}")
+        IO.puts("  Enabled: #{result.enabled}")
+        IO.puts("  Value: #{result.value}")
+
+      {:error, reason} ->
+        IO.puts("Feature evaluation failed: #{inspect(reason)}")
     end
 
-    # Test multiple contexts
-    contexts = [
-      TogglrSdk.RequestContext.new()
-      |> TogglrSdk.RequestContext.with_user_id("user1")
-      |> TogglrSdk.RequestContext.with_country("US")
-      |> TogglrSdk.RequestContext.set("plan", "premium"),
+    # Test different error types
+    IO.puts("\n=== Error Reporting Examples ===")
 
-      TogglrSdk.RequestContext.new()
-      |> TogglrSdk.RequestContext.with_user_id("user2")
-      |> TogglrSdk.RequestContext.with_country("RU")
-      |> TogglrSdk.RequestContext.set("plan", "basic"),
-
-      TogglrSdk.RequestContext.new()
-      |> TogglrSdk.RequestContext.with_user_id("user3")
-      |> TogglrSdk.RequestContext.with_country("DE")
-      |> TogglrSdk.RequestContext.set("plan", "enterprise")
-      |> TogglrSdk.RequestContext.set("region", "europe")
+    error_examples = [
+      {"timeout", "Service timeout after 10s", %{timeout_ms: 10000, service: "analytics"}},
+      {"validation", "Invalid user data provided", %{field: "email", value: "invalid-email"}},
+      {"service_unavailable", "External service is down", %{service: "database", region: "us-east-1"}},
+      {"rate_limit", "Too many requests", %{limit: 100, current: 150, window: "1m"}}
     ]
 
-    feature_keys = ["new_ui", "beta_feature", "premium_feature", "experimental_feature"]
-
-    # Test each context
-    Enum.with_index(contexts, 1)
-    |> Enum.each(fn {context, index} ->
-      IO.puts("\n--- Testing context #{index} ---")
-      IO.puts("Context: #{inspect(TogglrSdk.RequestContext.to_map(context))}")
-
-      Enum.each(feature_keys, fn feature_key ->
-        case TogglrSdk.Client.evaluate(client, feature_key, context) do
-          {:ok, result} ->
-            if result.found do
-              IO.puts("  #{feature_key}: enabled=#{result.enabled}, value=#{result.value}")
-            else
-              IO.puts("  #{feature_key}: not found")
-            end
-
-          {:error, reason} ->
-            IO.puts("  #{feature_key}: error - #{inspect(reason)}")
-        end
-
-        # Test with default value
-        case TogglrSdk.Client.is_enabled_or_default(client, feature_key, context, false) do
-          {:ok, enabled} ->
-            IO.puts("  #{feature_key} (with default): #{enabled}")
-
-          {:error, reason} ->
-            IO.puts("  #{feature_key} (with default): error - #{inspect(reason)}")
-        end
-      end)
-    end)
-
-    # Test caching
-    IO.puts("\n--- Testing Caching ---")
-    test_caching(client)
-
-    # Test error handling
-    IO.puts("\n--- Testing Error Handling ---")
-    test_error_handling(client)
-
-    # Test performance
-    IO.puts("\n--- Testing Performance ---")
-    test_performance(client)
-  end
-
-  defp test_caching(client) do
-    context = TogglrSdk.RequestContext.new()
-    |> TogglrSdk.RequestContext.with_user_id("cache_test_user")
-
-    # First request (should hit API)
-    start_time = System.monotonic_time(:millisecond)
-    case TogglrSdk.Client.evaluate(client, "new_ui", context) do
-      {:ok, result} ->
-        elapsed = System.monotonic_time(:millisecond) - start_time
-        IO.puts("First request: #{elapsed}ms, enabled=#{result.enabled}")
-
-      {:error, reason} ->
-        IO.puts("First request failed: #{inspect(reason)}")
-    end
-
-    # Second request (should hit cache)
-    start_time = System.monotonic_time(:millisecond)
-    case TogglrSdk.Client.evaluate(client, "new_ui", context) do
-      {:ok, result} ->
-        elapsed = System.monotonic_time(:millisecond) - start_time
-        IO.puts("Second request (cached): #{elapsed}ms, enabled=#{result.enabled}")
-
-      {:error, reason} ->
-        IO.puts("Second request failed: #{inspect(reason)}")
-    end
-  end
-
-  defp test_error_handling(client) do
-    context = TogglrSdk.RequestContext.new()
-    |> TogglrSdk.RequestContext.with_user_id("error_test_user")
-
-    # Test feature not found
-    case TogglrSdk.Client.is_enabled(client, "nonexistent_feature", context) do
-      {:error, %TogglrSdk.Exceptions.FeatureNotFoundException{feature_key: feature_key}} ->
-        IO.puts("Feature not found: #{feature_key}")
-
-      {:error, reason} ->
-        IO.puts("Unexpected error: #{inspect(reason)}")
-
-      {:ok, _} ->
-        IO.puts("Unexpected success")
-    end
-
-    # Test with default value
-    case TogglrSdk.Client.is_enabled_or_default(client, "nonexistent_feature", context, false) do
-      {:ok, enabled} ->
-        IO.puts("Feature with default: #{enabled}")
-
-      {:error, reason} ->
-        IO.puts("Error with default: #{inspect(reason)}")
-    end
-  end
-
-  defp test_performance(client) do
-    context = TogglrSdk.RequestContext.new()
-    |> TogglrSdk.RequestContext.with_user_id("perf_test_user")
-
-    # Test multiple evaluations
-    iterations = 10
-    start_time = System.monotonic_time(:millisecond)
-
-    for i <- 1..iterations do
-      case TogglrSdk.Client.evaluate(client, "new_ui", context) do
-        {:ok, result} ->
-          elapsed = System.monotonic_time(:millisecond) - start_time
-          IO.puts("  Attempt #{i}: #{elapsed}ms, enabled=#{result.enabled}, value=#{result.value}")
+    Enum.each(error_examples, fn {error_type, message, context_data} ->
+      case TogglrSdk.Client.report_error(client, feature_key, error_type, message, context_data) do
+        {:ok, {health, is_pending}} ->
+          IO.puts("Reported #{error_type} error: pending=#{is_pending}")
+          IO.puts("  Health: enabled=#{health.enabled}, auto_disabled=#{health.auto_disabled}")
+          IO.puts("  Error rate: #{health.error_rate}, threshold: #{health.threshold}")
 
         {:error, reason} ->
-          IO.puts("  Attempt #{i}: error - #{inspect(reason)}")
+          IO.puts("Failed to report #{error_type} error: #{inspect(reason)}")
       end
+      IO.puts("")
+    end)
+
+    # Feature health monitoring
+    IO.puts("=== Feature Health Monitoring ===")
+
+    case TogglrSdk.Client.get_feature_health(client, feature_key) do
+      {:ok, health} ->
+        IO.puts("Feature: #{health.feature_key}")
+        IO.puts("Environment: #{health.environment_key}")
+        IO.puts("Enabled: #{health.enabled}")
+        IO.puts("Auto Disabled: #{health.auto_disabled}")
+        IO.puts("Error Rate: #{health.error_rate}")
+        IO.puts("Threshold: #{health.threshold}")
+        IO.puts("Last Error At: #{health.last_error_at}")
+        IO.puts("Is Healthy: #{TogglrSdk.Models.FeatureHealth.healthy?(health)}")
+
+      {:error, reason} ->
+        IO.puts("Failed to get feature health: #{inspect(reason)}")
     end
 
-    total_time = System.monotonic_time(:millisecond) - start_time
-    IO.puts("Total time for #{iterations} requests: #{total_time}ms")
-    IO.puts("Average time per request: #{div(total_time, iterations)}ms")
+    # Simple health check
+    IO.puts("\n=== Simple Health Check ===")
+    case TogglrSdk.Client.is_feature_healthy(client, feature_key) do
+      {:ok, is_healthy} ->
+        IO.puts("Feature #{feature_key} is healthy: #{is_healthy}")
+
+      {:error, reason} ->
+        IO.puts("Health check failed: #{inspect(reason)}")
+    end
+
+    # Multiple features health check
+    IO.puts("\n=== Multiple Features Health Check ===")
+    features = ["advanced_analytics", "new_ui", "beta_features", "experimental_api"]
+
+    Enum.each(features, fn feature ->
+      case TogglrSdk.Client.is_feature_healthy(client, feature) do
+        {:ok, is_healthy} ->
+          status = if is_healthy, do: "healthy", else: "unhealthy"
+          IO.puts("Feature #{feature}: #{status}")
+
+        {:error, reason} ->
+          IO.puts("Feature #{feature}: error - #{inspect(reason)}")
+      end
+    end)
+
+    # Health check
+    IO.puts("\n=== System Health Check ===")
+    case TogglrSdk.Client.health_check(client) do
+      {:ok, healthy} ->
+        IO.puts("System health: #{healthy}")
+
+      {:error, reason} ->
+        IO.puts("System health check failed: #{inspect(reason)}")
+    end
   end
 end
 

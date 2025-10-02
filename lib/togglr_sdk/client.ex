@@ -246,7 +246,7 @@ defmodule TogglrSdk.Client do
       case response do
         %Tesla.Env{status: 200, body: body} ->
           case Jason.decode(body) do
-            {:ok, %{"feature_key" => fk, "enabled" => enabled, "value" => value}} ->
+            {:ok, %{"feature_key" => _fk, "enabled" => enabled, "value" => value}} ->
               result = %{
                 value: value,
                 enabled: enabled,
@@ -318,6 +318,210 @@ defmodule TogglrSdk.Client do
   defp log(client, level, message, metadata \\ %{}) do
     if function_exported?(client.config.logger, level, 2) do
       client.config.logger.log(level, message, metadata)
+    end
+  end
+
+  @doc """
+  Reports an error for a feature.
+
+  ## Parameters
+
+  - `feature_key`: The feature key to report an error for
+  - `error_type`: Type of error (e.g., "timeout", "validation", "service_unavailable")
+  - `error_message`: Human-readable error message
+  - `context`: Additional context data (default: %{})
+
+  ## Returns
+
+  - `{:ok, {health, is_pending}}` - Success, returns feature health and pending status
+  - `{:error, reason}` - Error occurred
+
+  ## Examples
+
+      iex> {:ok, {health, is_pending}} = client.report_error("feature_key", "timeout", "Service timeout")
+      iex> is_boolean(is_pending)
+      true
+
+  """
+  def report_error(%__MODULE__{} = client, feature_key, error_type, error_message, context \\ %{}) do
+    try do
+      {health, is_pending} = report_error_with_retries(client, feature_key, error_type, error_message, context)
+      {:ok, {health, is_pending}}
+    rescue
+      e in [TogglrSdk.Exceptions.TogglrException] ->
+        {:error, e}
+    end
+  end
+
+  @doc """
+  Gets feature health information.
+
+  ## Parameters
+
+  - `feature_key`: The feature key to get health for
+
+  ## Returns
+
+  - `{:ok, health}` - Success, returns feature health
+  - `{:error, reason}` - Error occurred
+
+  ## Examples
+
+      iex> {:ok, health} = client.get_feature_health("feature_key")
+      iex> is_boolean(health.enabled)
+      true
+
+  """
+  def get_feature_health(%__MODULE__{} = client, feature_key) do
+    try do
+      health = get_feature_health_with_retries(client, feature_key)
+      {:ok, health}
+    rescue
+      e in [TogglrSdk.Exceptions.TogglrException] ->
+        {:error, e}
+    end
+  end
+
+  @doc """
+  Checks if a feature is healthy.
+
+  ## Parameters
+
+  - `feature_key`: The feature key to check
+
+  ## Returns
+
+  - `{:ok, boolean}` - Success, returns health status
+  - `{:error, reason}` - Error occurred
+
+  ## Examples
+
+      iex> {:ok, healthy} = client.is_feature_healthy("feature_key")
+      iex> is_boolean(healthy)
+      true
+
+  """
+  def is_feature_healthy(%__MODULE__{} = client, feature_key) do
+    case get_feature_health(client, feature_key) do
+      {:ok, health} ->
+        {:ok, TogglrSdk.Models.FeatureHealth.healthy?(health)}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  # Private methods for error reporting
+
+  defp report_error_with_retries(client, feature_key, error_type, error_message, context) do
+    error_report = TogglrSdk.Models.ErrorReport.new(error_type, error_message, context)
+    
+    report_error_with_retries(client, feature_key, error_report, 0)
+  end
+
+  defp report_error_with_retries(client, feature_key, error_report, attempt) do
+    try do
+      report_error_single(client, feature_key, error_report)
+    rescue
+      e in [TogglrSdk.Exceptions.TogglrException] ->
+        if attempt < client.config.retries and should_retry?(e) do
+          delay = TogglrSdk.BackoffConfig.calculate_delay(client.config.backoff_config, attempt + 1)
+          Process.sleep(trunc(delay * 1000))
+          report_error_with_retries(client, feature_key, error_report, attempt + 1)
+        else
+          reraise e, __STACKTRACE__
+        end
+    end
+  end
+
+  defp report_error_single(client, feature_key, error_report) do
+    url = "#{client.config.base_url}/sdk/v1/features/#{feature_key}/report-error"
+    
+    headers = [
+      {"Authorization", client.config.api_key},
+      {"Content-Type", "application/json"}
+    ]
+
+    body = error_report |> TogglrSdk.Models.ErrorReport.to_map() |> Jason.encode!()
+
+    case Tesla.post(client.tesla_client, url, body, headers: headers) do
+      {:ok, %Tesla.Env{status: 200, body: response_body}} ->
+        health = TogglrSdk.Models.FeatureHealth.from_map(response_body)
+        {health, false} # health, is_pending
+
+      {:ok, %Tesla.Env{status: 202, body: response_body}} ->
+        health = TogglrSdk.Models.FeatureHealth.from_map(response_body)
+        {health, true} # health, is_pending
+
+      {:ok, %Tesla.Env{status: 401}} ->
+        raise TogglrSdk.Exceptions.UnauthorizedException
+
+      {:ok, %Tesla.Env{status: 400}} ->
+        raise TogglrSdk.Exceptions.BadRequestException
+
+      {:ok, %Tesla.Env{status: 404}} ->
+        raise TogglrSdk.Exceptions.FeatureNotFoundException.exception(feature_key)
+
+      {:ok, %Tesla.Env{status: 500}} ->
+        raise TogglrSdk.Exceptions.InternalServerException
+
+      {:ok, %Tesla.Env{status: status}} ->
+        raise TogglrSdk.Exceptions.TogglrException, "HTTP #{status}"
+
+      {:error, reason} ->
+        raise TogglrSdk.Exceptions.TogglrException, "Request failed: #{inspect(reason)}"
+    end
+  end
+
+  # Private methods for feature health
+
+  defp get_feature_health_with_retries(client, feature_key) do
+    get_feature_health_with_retries(client, feature_key, 0)
+  end
+
+  defp get_feature_health_with_retries(client, feature_key, attempt) do
+    try do
+      get_feature_health_single(client, feature_key)
+    rescue
+      e in [TogglrSdk.Exceptions.TogglrException] ->
+        if attempt < client.config.retries and should_retry?(e) do
+          delay = TogglrSdk.BackoffConfig.calculate_delay(client.config.backoff_config, attempt + 1)
+          Process.sleep(trunc(delay * 1000))
+          get_feature_health_with_retries(client, feature_key, attempt + 1)
+        else
+          reraise e, __STACKTRACE__
+        end
+    end
+  end
+
+  defp get_feature_health_single(client, feature_key) do
+    url = "#{client.config.base_url}/sdk/v1/features/#{feature_key}/health"
+    
+    headers = [
+      {"Authorization", client.config.api_key}
+    ]
+
+    case Tesla.get(client.tesla_client, url, headers: headers) do
+      {:ok, %Tesla.Env{status: 200, body: response_body}} ->
+        TogglrSdk.Models.FeatureHealth.from_map(response_body)
+
+      {:ok, %Tesla.Env{status: 401}} ->
+        raise TogglrSdk.Exceptions.UnauthorizedException
+
+      {:ok, %Tesla.Env{status: 400}} ->
+        raise TogglrSdk.Exceptions.BadRequestException
+
+      {:ok, %Tesla.Env{status: 404}} ->
+        raise TogglrSdk.Exceptions.FeatureNotFoundException.exception(feature_key)
+
+      {:ok, %Tesla.Env{status: 500}} ->
+        raise TogglrSdk.Exceptions.InternalServerException
+
+      {:ok, %Tesla.Env{status: status}} ->
+        raise TogglrSdk.Exceptions.TogglrException, "HTTP #{status}"
+
+      {:error, reason} ->
+        raise TogglrSdk.Exceptions.TogglrException, "Request failed: #{inspect(reason)}"
     end
   end
 end

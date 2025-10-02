@@ -133,6 +133,108 @@ context = TogglrSdk.RequestContext.new()
 # enabled = true
 ```
 
+## Error Reporting and Auto-Disable
+
+The SDK supports reporting errors for features, which can trigger automatic disabling based on error rates:
+
+```elixir
+# Report an error for a feature
+{:ok, {health, is_pending}} = TogglrSdk.Client.report_error(
+  client,
+  "feature_key",
+  "timeout",
+  "Service did not respond in 5s",
+  %{service: "payment-gateway", timeout_ms: 5000}
+)
+
+IO.puts("Error reported: pending=#{is_pending}")
+IO.puts("Feature health: enabled=#{health.enabled}, auto_disabled=#{health.auto_disabled}")
+```
+
+### Error Types
+
+Supported error types:
+- `timeout` - Service timeout
+- `validation` - Data validation error
+- `service_unavailable` - External service unavailable
+- `rate_limit` - Rate limit exceeded
+- `network` - Network connectivity issue
+- `internal` - Internal application error
+
+### Context Data
+
+You can provide additional context with error reports:
+
+```elixir
+context = %{
+  service: "payment-gateway",
+  timeout_ms: 5000,
+  user_id: "user123",
+  region: "us-east-1"
+}
+
+{:ok, {health, is_pending}} = TogglrSdk.Client.report_error(
+  client,
+  "feature_key",
+  "timeout",
+  "Service timeout",
+  context
+)
+```
+
+## Feature Health Monitoring
+
+Monitor the health status of features:
+
+```elixir
+# Get detailed health information
+{:ok, health} = TogglrSdk.Client.get_feature_health(client, "feature_key")
+
+IO.puts("Feature: #{health.feature_key}")
+IO.puts("Enabled: #{health.enabled}")
+IO.puts("Auto Disabled: #{health.auto_disabled}")
+IO.puts("Error Rate: #{health.error_rate}")
+IO.puts("Threshold: #{health.threshold}")
+IO.puts("Last Error At: #{health.last_error_at}")
+
+# Simple health check
+{:ok, is_healthy} = TogglrSdk.Client.is_feature_healthy(client, "feature_key")
+IO.puts("Feature is healthy: #{is_healthy}")
+```
+
+### FeatureHealth Model
+
+The `TogglrSdk.Models.FeatureHealth` struct provides:
+
+- `feature_key` - The feature identifier
+- `environment_key` - The environment identifier
+- `enabled` - Whether the feature is enabled
+- `auto_disabled` - Whether the feature was auto-disabled due to errors
+- `error_rate` - Current error rate (0.0 to 1.0)
+- `threshold` - Error rate threshold for auto-disable
+- `last_error_at` - Timestamp of the last error
+- `healthy?/1` - Function to check if feature is healthy
+
+### ErrorReport Model
+
+The `TogglrSdk.Models.ErrorReport` struct provides:
+
+- `error_type` - Type of error
+- `error_message` - Human-readable error message
+- `context` - Additional context data
+
+```elixir
+# Create an error report
+error_report = TogglrSdk.Models.ErrorReport.new(
+  "timeout",
+  "Service timeout",
+  %{service: "api", timeout_ms: 5000}
+)
+
+# Convert to map for API requests
+error_data = TogglrSdk.Models.ErrorReport.to_map(error_report)
+```
+
 ### Error Handling
 
 The SDK provides specific exceptions for different error scenarios:

@@ -173,4 +173,7 @@ defmodule TogglrSdk do
       TogglrSdk.Config.with_cache(config, false, 0, 0)
     end
   end
+
+  # Re-export models for convenience
+  # alias TogglrSdk.Models.{ErrorReport, FeatureHealth}
 end

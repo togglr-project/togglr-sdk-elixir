@@ -1,7 +1,7 @@
 #!/usr/bin/env elixir
 
 # Simple example of using Togglr SDK
-# Run with: elixir examples/simple_example.exs
+# Run with: elixir -pa _build/dev/lib/togglr_sdk/ebin examples/simple_example.exs
 
 defmodule SimpleExample do
   @moduledoc """
@@ -60,9 +60,6 @@ defmodule SimpleExample do
       {:ok, enabled} ->
         IO.puts("Feature is enabled: #{enabled}")
 
-      {:error, %TogglrSdk.Exceptions.FeatureNotFoundException{}} ->
-        IO.puts("Feature not found")
-
       {:error, reason} ->
         IO.puts("Error checking feature: #{inspect(reason)}")
     end
@@ -74,6 +71,35 @@ defmodule SimpleExample do
 
       {:error, reason} ->
         IO.puts("Error checking feature with default: #{inspect(reason)}")
+    end
+
+    # Report an error for a feature
+    case TogglrSdk.Client.report_error(client, "new_ui", "timeout", "Service did not respond in 5s", %{service: "payment-gateway", timeout_ms: 5000}) do
+      {:ok, {health, is_pending}} ->
+        IO.puts("Error reported for new_ui: pending=#{is_pending}")
+        IO.puts("Feature health: enabled=#{health.enabled}, auto_disabled=#{health.auto_disabled}")
+
+      {:error, reason} ->
+        IO.puts("Failed to report error: #{inspect(reason)}")
+    end
+
+    # Get feature health
+    case TogglrSdk.Client.get_feature_health(client, "new_ui") do
+      {:ok, health} ->
+        IO.puts("Feature health: enabled=#{health.enabled}, auto_disabled=#{health.auto_disabled}")
+        IO.puts("Error rate: #{health.error_rate}, threshold: #{health.threshold}")
+
+      {:error, reason} ->
+        IO.puts("Failed to get feature health: #{inspect(reason)}")
+    end
+
+    # Simple health check
+    case TogglrSdk.Client.is_feature_healthy(client, "new_ui") do
+      {:ok, is_healthy} ->
+        IO.puts("Feature new_ui is healthy: #{is_healthy}")
+
+      {:error, reason} ->
+        IO.puts("Failed to check feature health: #{inspect(reason)}")
     end
   end
 end
