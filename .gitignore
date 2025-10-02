@@ -25,9 +25,6 @@ togglr_sdk-*.tar
 # Temporary files, for example, from tests.
 /tmp/
 
-# Generated files
-/internal/generated/
-
 # IDE files
 .vscode/
 .idea/
