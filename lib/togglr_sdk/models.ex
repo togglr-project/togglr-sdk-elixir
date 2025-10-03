@@ -90,6 +90,31 @@ defmodule TogglrSdk.Models do
     ]
 
     @doc """
+    Creates a new feature health from individual parameters.
+
+    ## Parameters
+
+    - `opts`: Keyword list with health data
+
+    ## Examples
+
+        iex> TogglrSdk.Models.FeatureHealth.new(feature_key: "test", enabled: true)
+        %TogglrSdk.Models.FeatureHealth{feature_key: "test", enabled: true, auto_disabled: false}
+
+    """
+    def new(opts) when is_list(opts) do
+      %__MODULE__{
+        feature_key: Keyword.get(opts, :feature_key),
+        environment_key: Keyword.get(opts, :environment_key),
+        enabled: Keyword.get(opts, :enabled, false),
+        auto_disabled: Keyword.get(opts, :auto_disabled, false),
+        error_rate: Keyword.get(opts, :error_rate, 0.0),
+        threshold: Keyword.get(opts, :threshold, 0.0),
+        last_error_at: Keyword.get(opts, :last_error_at)
+      }
+    end
+
+    @doc """
     Creates a new feature health from API response data.
 
     ## Parameters

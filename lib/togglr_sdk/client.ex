@@ -12,6 +12,10 @@ defmodule TogglrSdk.Client do
   alias TogglrSdk.{Config, RequestContext, Cache, BackoffConfig}
   alias TogglrSdk.Exceptions
 
+  # Generated API client
+  alias SDKAPI.Api.Default, as: ApiClient
+  alias SDKAPI.Model.{FeatureErrorReport, FeatureHealth}
+
   @type evaluation_result :: %{
           value: String.t(),
           enabled: boolean(),
@@ -438,33 +442,31 @@ defmodule TogglrSdk.Client do
   end
 
   defp report_error_single(client, feature_key, error_report) do
-    url = "#{client.config.base_url}/sdk/v1/features/#{feature_key}/report-error"
+    # Convert our ErrorReport to generated FeatureErrorReport
+    api_error_report = %FeatureErrorReport{
+      error_type: error_report.error_type,
+      error_message: error_report.error_message,
+      context: error_report.context
+    }
 
-    headers = [
-      {"Authorization", client.config.api_key},
-      {"Content-Type", "application/json"}
-    ]
-
-    body = error_report |> TogglrSdk.Models.ErrorReport.to_map() |> Jason.encode!()
-
-    case Tesla.post(client.tesla_client, url, body, headers: headers) do
-      {:ok, %Tesla.Env{status: 202}} ->
-        # 202 response means success - error queued for processing
+    case ApiClient.report_feature_error(client.tesla_client, feature_key, api_error_report) do
+      {:ok, _} ->
+        # Success - error queued for processing
         :ok
 
-      {:ok, %Tesla.Env{status: 401}} ->
+      {:error, %Tesla.Env{status: 401}} ->
         raise TogglrSdk.Exceptions.UnauthorizedException
 
-      {:ok, %Tesla.Env{status: 400}} ->
+      {:error, %Tesla.Env{status: 400}} ->
         raise TogglrSdk.Exceptions.BadRequestException
 
-      {:ok, %Tesla.Env{status: 404}} ->
+      {:error, %Tesla.Env{status: 404}} ->
         raise TogglrSdk.Exceptions.FeatureNotFoundException.exception(feature_key)
 
-      {:ok, %Tesla.Env{status: 500}} ->
+      {:error, %Tesla.Env{status: 500}} ->
         raise TogglrSdk.Exceptions.InternalServerException
 
-      {:ok, %Tesla.Env{status: status}} ->
+      {:error, %Tesla.Env{status: status}} ->
         raise TogglrSdk.Exceptions.TogglrException, "HTTP #{status}"
 
       {:error, reason} ->
@@ -494,33 +496,40 @@ defmodule TogglrSdk.Client do
   end
 
   defp get_feature_health_single(client, feature_key) do
-    url = "#{client.config.base_url}/sdk/v1/features/#{feature_key}/health"
+    case ApiClient.get_feature_health(client.tesla_client, feature_key) do
+      {:ok, api_health} ->
+        # Convert generated FeatureHealth to our FeatureHealth
+        convert_feature_health(api_health)
 
-    headers = [
-      {"Authorization", client.config.api_key}
-    ]
-
-    case Tesla.get(client.tesla_client, url, headers: headers) do
-      {:ok, %Tesla.Env{status: 200, body: response_body}} ->
-        TogglrSdk.Models.FeatureHealth.from_map(response_body)
-
-      {:ok, %Tesla.Env{status: 401}} ->
+      {:error, %Tesla.Env{status: 401}} ->
         raise TogglrSdk.Exceptions.UnauthorizedException
 
-      {:ok, %Tesla.Env{status: 400}} ->
+      {:error, %Tesla.Env{status: 400}} ->
         raise TogglrSdk.Exceptions.BadRequestException
 
-      {:ok, %Tesla.Env{status: 404}} ->
+      {:error, %Tesla.Env{status: 404}} ->
         raise TogglrSdk.Exceptions.FeatureNotFoundException.exception(feature_key)
 
-      {:ok, %Tesla.Env{status: 500}} ->
+      {:error, %Tesla.Env{status: 500}} ->
         raise TogglrSdk.Exceptions.InternalServerException
 
-      {:ok, %Tesla.Env{status: status}} ->
+      {:error, %Tesla.Env{status: status}} ->
         raise TogglrSdk.Exceptions.TogglrException, "HTTP #{status}"
 
       {:error, reason} ->
         raise TogglrSdk.Exceptions.TogglrException, "Request failed: #{inspect(reason)}"
     end
+  end
+
+  defp convert_feature_health(api_health) do
+    TogglrSdk.Models.FeatureHealth.new(
+      feature_key: api_health.feature_key,
+      environment_key: api_health.environment_key,
+      enabled: api_health.enabled || false,
+      auto_disabled: api_health.auto_disabled || false,
+      error_rate: api_health.error_rate || 0,
+      threshold: api_health.threshold || 0,
+      last_error_at: api_health.last_error_at
+    )
   end
 end
