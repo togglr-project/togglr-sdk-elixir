@@ -7,9 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - 2025-01-02
 
+### Changed
+- **Error Reporting API Simplification**: Updated error reporting to use asynchronous processing
+  - `report_error/4` and `report_error/5` - Now returns `:ok` (simplified API)
+  - 202 responses now always indicate successful queuing for processing (no more pending changes)
+  - Removed `is_pending` return value as it's no longer needed
+
 ### Added
 - **Error Reporting**: New methods for reporting feature execution errors
-  - `report_error/4` and `report_error/5` - Report a single error with automatic retries, returns `{:ok, {health, is_pending}}`
+  - `report_error/4` and `report_error/5` - Report a single error with automatic retries, returns `:ok`
   - Support for different error types (timeout, validation, service_unavailable, etc.)
   - Context data support for error reports
 

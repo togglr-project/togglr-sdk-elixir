@@ -71,10 +71,8 @@ defmodule AdvancedExample do
 
     Enum.each(error_examples, fn {error_type, message, context_data} ->
       case TogglrSdk.Client.report_error(client, feature_key, error_type, message, context_data) do
-        {:ok, {health, is_pending}} ->
-          IO.puts("Reported #{error_type} error: pending=#{is_pending}")
-          IO.puts("  Health: enabled=#{health.enabled}, auto_disabled=#{health.auto_disabled}")
-          IO.puts("  Error rate: #{health.error_rate}, threshold: #{health.threshold}")
+        :ok ->
+          IO.puts("Reported #{error_type} error successfully - queued for processing")
 
         {:error, reason} ->
           IO.puts("Failed to report #{error_type} error: #{inspect(reason)}")

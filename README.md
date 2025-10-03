@@ -139,7 +139,7 @@ The SDK supports reporting errors for features, which can trigger automatic disa
 
 ```elixir
 # Report an error for a feature
-{:ok, {health, is_pending}} = TogglrSdk.Client.report_error(
+:ok = TogglrSdk.Client.report_error(
   client,
   "feature_key",
   "timeout",
@@ -147,8 +147,7 @@ The SDK supports reporting errors for features, which can trigger automatic disa
   %{service: "payment-gateway", timeout_ms: 5000}
 )
 
-IO.puts("Error reported: pending=#{is_pending}")
-IO.puts("Feature health: enabled=#{health.enabled}, auto_disabled=#{health.auto_disabled}")
+IO.puts("Error reported successfully - queued for processing")
 ```
 
 ### Error Types
@@ -173,7 +172,7 @@ context = %{
   region: "us-east-1"
 }
 
-{:ok, {health, is_pending}} = TogglrSdk.Client.report_error(
+:ok = TogglrSdk.Client.report_error(
   client,
   "feature_key",
   "timeout",

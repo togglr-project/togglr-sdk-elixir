@@ -75,9 +75,8 @@ defmodule SimpleExample do
 
     # Report an error for a feature
     case TogglrSdk.Client.report_error(client, "new_ui", "timeout", "Service did not respond in 5s", %{service: "payment-gateway", timeout_ms: 5000}) do
-      {:ok, {health, is_pending}} ->
-        IO.puts("Error reported for new_ui: pending=#{is_pending}")
-        IO.puts("Feature health: enabled=#{health.enabled}, auto_disabled=#{health.auto_disabled}")
+      :ok ->
+        IO.puts("Error reported successfully - queued for processing")
 
       {:error, reason} ->
         IO.puts("Failed to report error: #{inspect(reason)}")

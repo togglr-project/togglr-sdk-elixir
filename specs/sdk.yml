@@ -96,14 +96,8 @@ paths:
             schema:
               $ref: '#/components/schemas/FeatureErrorReport'
       responses:
-        '200':
-          description: Error reported successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FeatureHealth'
         '202':
-          description: Error reported, evaluation pending
+          description: Error reported
         '400':
           description: Bad request
           content:

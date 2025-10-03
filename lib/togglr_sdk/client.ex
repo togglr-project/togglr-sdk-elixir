@@ -43,7 +43,7 @@ defmodule TogglrSdk.Client do
       case Cache.start_link(config.cache_max_size, config.cache_ttl) do
         {:ok, pid} -> pid
         {:error, {:already_started, pid}} -> pid
-        {:error, reason} -> 
+        {:error, reason} ->
           Logger.warning("Failed to start cache: #{inspect(reason)}")
           nil
       end
@@ -161,7 +161,7 @@ defmodule TogglrSdk.Client do
     try do
       response = Tesla.get(client.tesla_client, "/sdk/v1/health")
       case response do
-        %Tesla.Env{status: 200, body: body} ->
+        {:ok, %Tesla.Env{status: 200, body: body}} ->
           case Jason.decode(body) do
             {:ok, %{"status" => "ok"}} -> {:ok, true}
             _ -> {:ok, false}
@@ -206,7 +206,7 @@ defmodule TogglrSdk.Client do
 
     # Create a Tesla client with the middleware
     tesla_client = Tesla.client(middleware)
-    
+
     # Store the Tesla client in the client struct
     %{client | tesla_client: tesla_client}
   end
@@ -244,7 +244,7 @@ defmodule TogglrSdk.Client do
       response = Tesla.post(client.tesla_client, "/sdk/v1/features/#{feature_key}/evaluate", request_body)
 
       case response do
-        %Tesla.Env{status: 200, body: body} ->
+        {:ok, %Tesla.Env{status: 200, body: body}} ->
           case Jason.decode(body) do
             {:ok, %{"feature_key" => _fk, "enabled" => enabled, "value" => value}} ->
               result = %{
@@ -270,11 +270,14 @@ defmodule TogglrSdk.Client do
               %{value: "", enabled: false, found: false}
           end
 
-        %Tesla.Env{status: status, body: body} ->
+        {:ok, %Tesla.Env{status: status, body: body}} ->
           handle_http_error(status, body, feature_key)
 
-        %Tesla.Env{status: status} ->
+        {:ok, %Tesla.Env{status: status}} ->
           handle_http_error(status, "", feature_key)
+
+        {:error, reason} ->
+          raise TogglrSdk.Exceptions.TogglrException, "Request failed: #{inspect(reason)}"
       end
     end
   end
@@ -333,20 +336,19 @@ defmodule TogglrSdk.Client do
 
   ## Returns
 
-  - `{:ok, {health, is_pending}}` - Success, returns feature health and pending status
+  - `:ok` - Success, error queued for processing
   - `{:error, reason}` - Error occurred
 
   ## Examples
 
-      iex> {:ok, {health, is_pending}} = client.report_error("feature_key", "timeout", "Service timeout")
-      iex> is_boolean(is_pending)
-      true
+      iex> :ok = client.report_error("feature_key", "timeout", "Service timeout")
+      :ok
 
   """
   def report_error(%__MODULE__{} = client, feature_key, error_type, error_message, context \\ %{}) do
     try do
-      {health, is_pending} = report_error_with_retries(client, feature_key, error_type, error_message, context)
-      {:ok, {health, is_pending}}
+      report_error_with_retries(client, feature_key, error_type, error_message, context)
+      :ok
     rescue
       e in [TogglrSdk.Exceptions.TogglrException] ->
         {:error, e}
@@ -415,13 +417,14 @@ defmodule TogglrSdk.Client do
 
   defp report_error_with_retries(client, feature_key, error_type, error_message, context) do
     error_report = TogglrSdk.Models.ErrorReport.new(error_type, error_message, context)
-    
+
     report_error_with_retries(client, feature_key, error_report, 0)
   end
 
   defp report_error_with_retries(client, feature_key, error_report, attempt) do
     try do
       report_error_single(client, feature_key, error_report)
+      :ok # Success
     rescue
       e in [TogglrSdk.Exceptions.TogglrException] ->
         if attempt < client.config.retries and should_retry?(e) do
@@ -436,7 +439,7 @@ defmodule TogglrSdk.Client do
 
   defp report_error_single(client, feature_key, error_report) do
     url = "#{client.config.base_url}/sdk/v1/features/#{feature_key}/report-error"
-    
+
     headers = [
       {"Authorization", client.config.api_key},
       {"Content-Type", "application/json"}
@@ -445,13 +448,9 @@ defmodule TogglrSdk.Client do
     body = error_report |> TogglrSdk.Models.ErrorReport.to_map() |> Jason.encode!()
 
     case Tesla.post(client.tesla_client, url, body, headers: headers) do
-      {:ok, %Tesla.Env{status: 200, body: response_body}} ->
-        health = TogglrSdk.Models.FeatureHealth.from_map(response_body)
-        {health, false} # health, is_pending
-
-      {:ok, %Tesla.Env{status: 202, body: response_body}} ->
-        health = TogglrSdk.Models.FeatureHealth.from_map(response_body)
-        {health, true} # health, is_pending
+      {:ok, %Tesla.Env{status: 202}} ->
+        # 202 response means success - error queued for processing
+        :ok
 
       {:ok, %Tesla.Env{status: 401}} ->
         raise TogglrSdk.Exceptions.UnauthorizedException
@@ -496,7 +495,7 @@ defmodule TogglrSdk.Client do
 
   defp get_feature_health_single(client, feature_key) do
     url = "#{client.config.base_url}/sdk/v1/features/#{feature_key}/health"
-    
+
     headers = [
       {"Authorization", client.config.api_key}
     ]
