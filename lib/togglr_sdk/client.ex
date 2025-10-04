@@ -23,10 +23,11 @@ defmodule TogglrSdk.Client do
 
   @type t :: %__MODULE__{
           config: Config.t(),
-          cache: pid() | nil
+          cache: pid() | nil,
+          tesla_client: Tesla.Client.t()
         }
 
-  defstruct [:config, :cache]
+  defstruct [:config, :cache, :tesla_client]
 
   @doc """
   Creates a new Togglr client with the given configuration.
@@ -53,9 +54,13 @@ defmodule TogglrSdk.Client do
       nil
     end
 
+    # Create Tesla client with SSL configuration
+    tesla_client = create_tesla_client(config)
+
     client = %__MODULE__{
       config: config,
-      cache: cache
+      cache: cache,
+      tesla_client: tesla_client
     }
 
     {:ok, client}
@@ -158,7 +163,7 @@ defmodule TogglrSdk.Client do
   """
   def health_check(%__MODULE__{} = client) do
     try do
-      case ApiClient.health_check(client) do
+      case ApiClient.sdk_v1_health_get(client.tesla_client) do
         {:ok, %{"status" => "ok"}} -> {:ok, true}
         _ -> {:ok, false}
       end
@@ -187,6 +192,24 @@ defmodule TogglrSdk.Client do
   end
 
   # Private functions
+
+  defp create_tesla_client(config) do
+    middleware = [
+      {Tesla.Middleware.BaseUrl, config.base_url},
+      {Tesla.Middleware.Headers, [{"Authorization", config.api_key}]},
+      {Tesla.Middleware.JSON, engine: Jason},
+      {Tesla.Middleware.Timeout, timeout: config.timeout}
+    ]
+
+    # Add SSL configuration if insecure mode is enabled
+    middleware = if config.insecure do
+      middleware ++ [{Tesla.Middleware.SSL, verify: false}]
+    else
+      middleware
+    end
+
+    Tesla.client(middleware)
+  end
 
   defp evaluate_with_retries(client, feature_key, context) do
     evaluate_with_retries(client, feature_key, context, 0)
@@ -219,7 +242,7 @@ defmodule TogglrSdk.Client do
       # Make API request using generated client
       request_body = RequestContext.to_map(context)
 
-      case ApiClient.evaluate_feature(client, feature_key, request_body) do
+      case ApiClient.sdk_v1_features_feature_key_evaluate_post(client.tesla_client, feature_key, request_body) do
         {:ok, %{"feature_key" => _fk, "enabled" => enabled, "value" => value}} ->
           result = %{
             value: value,
@@ -418,7 +441,7 @@ defmodule TogglrSdk.Client do
       context: error_report.context
     }
 
-    case ApiClient.report_feature_error(client, feature_key, api_error_report) do
+    case ApiClient.report_feature_error(client.tesla_client, feature_key, api_error_report) do
       {:ok, _} ->
         # Success - error queued for processing
         :ok
@@ -465,7 +488,7 @@ defmodule TogglrSdk.Client do
   end
 
   defp get_feature_health_single(client, feature_key) do
-    case ApiClient.get_feature_health(client, feature_key) do
+    case ApiClient.get_feature_health(client.tesla_client, feature_key) do
       {:ok, api_health} ->
         # Convert generated FeatureHealth to our FeatureHealth
         convert_feature_health(api_health)

@@ -73,7 +73,8 @@ opts = [
   retries: 5,
   cache_enabled: true,
   cache_max_size: 2000,
-  cache_ttl: 120
+  cache_ttl: 120,
+  insecure: true  # Skip SSL verification for self-signed certificates
 ]
 {:ok, client} = TogglrSdk.new_client("your-api-key", opts)
 

@@ -15,7 +15,8 @@ defmodule TogglrSdk.Config do
     :cache_max_size,
     :cache_ttl,
     :backoff_config,
-    :logger
+    :logger,
+    :insecure
   ]
 
   @type t :: %__MODULE__{
@@ -27,7 +28,8 @@ defmodule TogglrSdk.Config do
           cache_max_size: non_neg_integer(),
           cache_ttl: non_neg_integer(),
           backoff_config: TogglrSdk.BackoffConfig.t(),
-          logger: module()
+          logger: module(),
+          insecure: boolean()
         }
 
   @doc """
@@ -50,7 +52,8 @@ defmodule TogglrSdk.Config do
       cache_max_size: 1000,
       cache_ttl: 60,
       backoff_config: TogglrSdk.BackoffConfig.default(),
-      logger: Logger
+      logger: Logger,
+      insecure: false
     }
   end
 
@@ -138,5 +141,19 @@ defmodule TogglrSdk.Config do
   """
   def with_logger(%__MODULE__{} = config, logger) when is_atom(logger) do
     %{config | logger: logger}
+  end
+
+  @doc """
+  Enables insecure mode (skip SSL verification).
+
+  ## Examples
+
+      iex> config = TogglrSdk.Config.default("key") |> TogglrSdk.Config.with_insecure()
+      iex> config.insecure
+      true
+
+  """
+  def with_insecure(%__MODULE__{} = config) do
+    %{config | insecure: true}
   end
 end
