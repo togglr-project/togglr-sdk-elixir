@@ -26,14 +26,15 @@ defmodule TogglrSdk.MixProject do
 
   defp deps do
     [
-      {:tesla, "~> 1.4"},
+      {:tesla, "~> 1.15.3"},
       {:jason, "~> 1.4"},
       {:cachex, "~> 3.6"},
       {:telemetry, "~> 1.0"},
       {:ex_doc, "~> 0.27", only: :dev, runtime: false},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
-      {:mox, "~> 1.0", only: :test}
+      {:mox, "~> 1.0", only: :test},
+      {:hackney, "~> 1.25"}
     ]
   end
 

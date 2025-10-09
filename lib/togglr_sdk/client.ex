@@ -9,11 +9,10 @@ defmodule TogglrSdk.Client do
   require Logger
 
   alias TogglrSdk.{Config, RequestContext, Cache, BackoffConfig}
-  alias TogglrSdk.Exceptions
-
   # Generated API client
   alias SDKAPI.Api.Default, as: ApiClient
-  alias SDKAPI.Model.{FeatureErrorReport, FeatureHealth}
+  alias SDKAPI.Model.FeatureErrorReport
+
 
   @type evaluation_result :: %{
           value: String.t(),
@@ -54,7 +53,6 @@ defmodule TogglrSdk.Client do
       nil
     end
 
-    # Create Tesla client with SSL configuration
     tesla_client = create_tesla_client(config)
 
     client = %__MODULE__{
@@ -164,7 +162,7 @@ defmodule TogglrSdk.Client do
   def health_check(%__MODULE__{} = client) do
     try do
       case ApiClient.sdk_v1_health_get(client.tesla_client) do
-        {:ok, %{"status" => "ok"}} -> {:ok, true}
+        {:ok, %SDKAPI.Model.HealthResponse{status: "ok"}} -> {:ok, true}
         _ -> {:ok, false}
       end
     rescue
@@ -193,16 +191,24 @@ defmodule TogglrSdk.Client do
 
   # Private functions
 
-  defp create_tesla_client(config) do
-    middleware = [
-      {Tesla.Middleware.BaseUrl, config.base_url},
-      {Tesla.Middleware.Headers, [{"Authorization", config.api_key}]},
-      {Tesla.Middleware.JSON, engine: Jason},
-      {Tesla.Middleware.Timeout, timeout: config.timeout}
-    ]
+defp create_tesla_client(config) do
+  middleware = [
+    {Tesla.Middleware.BaseUrl, config.base_url},
+    {Tesla.Middleware.Headers, [{"Authorization", config.api_key}]},
+    {Tesla.Middleware.JSON, engine: Jason},
+    {Tesla.Middleware.Timeout, timeout: config.timeout}
+  ]
 
-    Tesla.client(middleware)
-  end
+  adapter_opts =
+    if config.insecure do
+      IO.puts("INSECURE MODE: skipping TLS verification")
+      [insecure: true]
+    else
+      []
+    end
+
+  Tesla.client(middleware, {Tesla.Adapter.Hackney, adapter_opts})
+end
 
   defp evaluate_with_retries(client, feature_key, context) do
     evaluate_with_retries(client, feature_key, context, 0)
@@ -236,7 +242,7 @@ defmodule TogglrSdk.Client do
       request_body = RequestContext.to_map(context)
 
       case ApiClient.sdk_v1_features_feature_key_evaluate_post(client.tesla_client, feature_key, request_body) do
-        {:ok, %{"feature_key" => _fk, "enabled" => enabled, "value" => value}} ->
+        {:ok, %SDKAPI.Model.EvaluateResponse{feature_key: _fk, enabled: enabled, value: value}} ->
           result = %{
             value: value,
             enabled: enabled,
@@ -255,9 +261,6 @@ defmodule TogglrSdk.Client do
           })
 
           result
-
-        {:ok, _} ->
-          %{value: "", enabled: false, found: false}
 
         {:error, %Tesla.Env{status: status, body: body}} ->
           handle_http_error(status, body, feature_key)
@@ -295,9 +298,6 @@ defmodule TogglrSdk.Client do
     raise TogglrSdk.Exceptions.TogglrException, "HTTP #{status}"
   end
 
-  defp should_retry?(%TogglrSdk.Exceptions.UnauthorizedException{}), do: false
-  defp should_retry?(%TogglrSdk.Exceptions.BadRequestException{}), do: false
-  defp should_retry?(%TogglrSdk.Exceptions.FeatureNotFoundException{}), do: false
   defp should_retry?(_), do: true
 
   defp get_cache_key(feature_key, context) do
@@ -307,9 +307,9 @@ defmodule TogglrSdk.Client do
     "#{feature_key}:#{context_hash}"
   end
 
-  defp log(client, level, message, metadata \\ %{}) do
+  defp log(client, level, message, metadata) do
     if function_exported?(client.config.logger, level, 2) do
-      client.config.logger.log(level, message, metadata)
+      apply(client.config.logger, level, [message, metadata])
     end
   end
 

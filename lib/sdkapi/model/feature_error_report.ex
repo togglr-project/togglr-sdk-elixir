@@ -3,10 +3,10 @@
 
 defmodule SDKAPI.Model.FeatureErrorReport do
   @moduledoc """
-  
+
   """
 
-  @derive JSON.Encoder
+  @derive Jason.Encoder
   defstruct [
     :error_type,
     :error_message,
@@ -26,4 +26,3 @@ defmodule SDKAPI.Model.FeatureErrorReport do
      |> Deserializer.deserialize(:context, :map, SDKAPI.Model.AnyType)
   end
 end
-

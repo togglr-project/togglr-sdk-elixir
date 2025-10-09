@@ -6,8 +6,12 @@ defmodule SDKAPI.Deserializer do
   Helper functions for deserializing responses into models
   """
 
-  def json_decode(json) do
+  def json_decode(json) when is_binary(json) do
     Jason.decode(json)
+  end
+
+  def json_decode(data) when is_map(data) do
+    {:ok, data}
   end
 
   def json_decode(json, module) do

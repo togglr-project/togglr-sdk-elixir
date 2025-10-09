@@ -151,6 +151,7 @@ defmodule TogglrSdk do
     |> maybe_apply_opt(opts, :retries, &TogglrSdk.Config.with_retries/2)
     |> maybe_apply_opt(opts, :cache_enabled, &apply_cache_opts(&1, &2, opts))
     |> maybe_apply_opt(opts, :logger, &TogglrSdk.Config.with_logger/2)
+    |> maybe_apply_opt(opts, :insecure, &TogglrSdk.Config.with_insecure/1)
 
     TogglrSdk.Client.new(config)
   end
