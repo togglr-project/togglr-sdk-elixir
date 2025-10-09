@@ -201,7 +201,6 @@ defp create_tesla_client(config) do
 
   adapter_opts =
     if config.insecure do
-      IO.puts("INSECURE MODE: skipping TLS verification")
       [insecure: true]
     else
       []

@@ -156,4 +156,12 @@ defmodule TogglrSdk.Config do
   def with_insecure(%__MODULE__{} = config) do
     %{config | insecure: true}
   end
+
+  def with_insecure_value(%__MODULE__{} = config, value) do
+    if value == true do
+      %{config | insecure: value}
+    else
+      config
+    end
+  end
 end

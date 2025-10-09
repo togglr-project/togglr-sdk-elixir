@@ -12,12 +12,13 @@ defmodule SimpleExample do
 
     # Create a client
     opts = [
-        base_url: "http://localhost:8090",
+        base_url: "https://localhost",
         timeout: 60000,
         retries: 5,
         cache_enabled: true,
         cache_max_size: 2000,
         cache_ttl: 120,
+        insecure: true,
     ]
     case TogglrSdk.new_client("42b6f8f1-630c-400c-97bd-a3454a07f700", opts) do
       {:ok, client} ->
