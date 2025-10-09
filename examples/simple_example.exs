@@ -75,9 +75,6 @@ defmodule SimpleExample do
     case TogglrSdk.Client.is_enabled_or_default(client, "new_ui", context, false) do
       {:ok, enabled} ->
         IO.puts("Feature enabled (with default): #{enabled}")
-
-      {:error, reason} ->
-        IO.puts("Error checking feature with default: #{inspect(reason)}")
     end
 
     # Report an error for a feature

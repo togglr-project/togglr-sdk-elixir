@@ -6,7 +6,7 @@ defmodule SDKAPI.Model.FeatureErrorReport do
 
   """
 
-  @derive Jason.Encoder
+  @derive JSON.Encoder
   defstruct [
     :error_type,
     :error_message,

@@ -37,7 +37,7 @@ defmodule TogglrSdk do
 
   ## Configuration
 
-  The SDK can be configured with various options:
+  # The SDK can be configured with various options:
 
       config = TogglrSdk.Config.default("your-api-key")
       |> TogglrSdk.Config.with_base_url("https://api.togglr.com")
@@ -109,6 +109,9 @@ defmodule TogglrSdk do
 
   """
   def new_client(api_key) when is_binary(api_key) do
+    # Setup protocol derivations for generated models
+    TogglrSdk.ProtocolDerivations.setup()
+
     config = TogglrSdk.Config.default(api_key)
     TogglrSdk.Client.new(config)
   end
@@ -145,6 +148,9 @@ defmodule TogglrSdk do
 
   """
   def new_client(api_key, opts) when is_binary(api_key) and is_list(opts) do
+    # Setup protocol derivations for generated models
+    TogglrSdk.ProtocolDerivations.setup()
+
     config = TogglrSdk.Config.default(api_key)
     |> maybe_apply_opt(opts, :base_url, &TogglrSdk.Config.with_base_url/2)
     |> maybe_apply_opt(opts, :timeout, &TogglrSdk.Config.with_timeout/2)
@@ -177,4 +183,5 @@ defmodule TogglrSdk do
 
   # Re-export models for convenience
   # alias TogglrSdk.Models.{ErrorReport, FeatureHealth}
+
 end
