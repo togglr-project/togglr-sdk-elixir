@@ -69,6 +69,20 @@ defmodule TogglrSdk.RequestContext do
   end
 
   @doc """
+  Sets the user email in the context.
+
+  ## Examples
+
+      iex> context = TogglrSdk.RequestContext.new() |> TogglrSdk.RequestContext.with_user_email("user@example.com")
+      iex> context.data["user.email"]
+      "user@example.com"
+
+  """
+  def with_user_email(%__MODULE__{} = context, email) when is_binary(email) do
+    %{context | data: Map.put(context.data, "user.email", email)}
+  end
+
+  @doc """
   Sets a custom attribute in the context.
 
   ## Examples

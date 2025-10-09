@@ -201,13 +201,6 @@ defmodule TogglrSdk.Client do
       {Tesla.Middleware.Timeout, timeout: config.timeout}
     ]
 
-    # Add SSL configuration if insecure mode is enabled
-    middleware = if config.insecure do
-      middleware ++ [{Tesla.Middleware.SSL, verify: false}]
-    else
-      middleware
-    end
-
     Tesla.client(middleware)
   end
 

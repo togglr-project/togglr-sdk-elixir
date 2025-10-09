@@ -1,7 +1,6 @@
 #!/usr/bin/env elixir
 
 # Advanced example of using Togglr SDK
-# Run with: elixir examples/advanced_example.exs
 
 defmodule AdvancedExample do
   @moduledoc """
@@ -13,8 +12,9 @@ defmodule AdvancedExample do
     IO.puts("=== Togglr SDK Advanced Example ===")
 
     # Create a client with advanced configuration
-    config = TogglrSdk.Config.default("your-api-key")
-    |> TogglrSdk.Config.with_base_url("http://localhost:8090")
+    config = TogglrSdk.Config.default("42b6f8f1-630c-400c-97bd-a3454a07f700")
+    |> TogglrSdk.Config.with_base_url("https://localhost")
+    |> TogglrSdk.Config.with_insecure()
     |> TogglrSdk.Config.with_timeout(60000)
     |> TogglrSdk.Config.with_retries(5)
     |> TogglrSdk.Config.with_cache(true, 2000, 120)

@@ -5,7 +5,7 @@ defmodule TogglrSdk.ConfigTest do
   test "creates default configuration" do
     config = TogglrSdk.Config.default("test-api-key")
     assert config.api_key == "test-api-key"
-    assert config.base_url == "http://localhost:8090"
+    assert config.base_url == "https://localhost"
     assert config.timeout == 30_000
     assert config.retries == 3
     assert config.cache_enabled == true

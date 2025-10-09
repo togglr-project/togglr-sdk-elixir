@@ -1,7 +1,6 @@
 #!/usr/bin/env elixir
 
 # Simple example of using Togglr SDK
-# Run with: elixir -pa _build/dev/lib/togglr_sdk/ebin examples/simple_example.exs
 
 defmodule SimpleExample do
   @moduledoc """
@@ -11,8 +10,17 @@ defmodule SimpleExample do
   def main do
     IO.puts("=== Togglr SDK Simple Example ===")
 
-    # Create a client with default configuration
-    case TogglrSdk.new_client("your-api-key") do
+    # Create a client
+    opts = [
+        base_url: "https://localhost",
+        timeout: 60000,
+        retries: 5,
+        cache_enabled: true,
+        cache_max_size: 2000,
+        cache_ttl: 120,
+        insecure: true,
+    ]
+    case TogglrSdk.new_client("42b6f8f1-630c-400c-97bd-a3454a07f700", opts) do
       {:ok, client} ->
         try do
           run_example(client)

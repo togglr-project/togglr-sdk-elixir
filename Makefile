@@ -1,4 +1,4 @@
-.PHONY: install generate test lint format clean docs
+.PHONY: install generate test lint format clean docs run-example-simple run-example-advanced
 
 # Install dependencies
 install:
@@ -51,3 +51,11 @@ dev-setup: install generate
 # Build package
 build: test lint
 	mix hex.build
+
+# Run simple example
+run-example-simple:
+	mix run examples/simple_example.exs
+
+# Run advanced example
+run-example-advanced:
+	mix run examples/advanced_example.exs

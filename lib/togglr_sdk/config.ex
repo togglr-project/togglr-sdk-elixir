@@ -45,7 +45,7 @@ defmodule TogglrSdk.Config do
   def default(api_key) when is_binary(api_key) do
     %__MODULE__{
       api_key: api_key,
-      base_url: "http://localhost:8090",
+      base_url: "https://localhost",
       timeout: 30_000,
       retries: 3,
       cache_enabled: true,
