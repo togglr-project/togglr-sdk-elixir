@@ -330,6 +330,7 @@ end
 
 - Elixir 1.14 or later
 - Mix 1.14 or later
+- OpenAPI Generator CLI (for client generation)
 
 ### Setup
 
@@ -353,6 +354,22 @@ mix format
 
 # Generate documentation
 mix docs
+```
+
+### OpenAPI Client Generation
+
+This project automatically generates the API client from OpenAPI specifications. See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed information about the generation process.
+
+Quick commands:
+```bash
+# Generate API client
+make generate
+
+# Full regeneration (clean + generate)
+make regenerate
+
+# Apply modifications only
+make post-generate
 ```
 
 ### Building

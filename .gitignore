@@ -39,3 +39,6 @@ togglr_sdk-*.tar
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+
+internal/generated/

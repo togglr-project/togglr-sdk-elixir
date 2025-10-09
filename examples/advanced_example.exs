@@ -44,7 +44,7 @@ defmodule AdvancedExample do
 
     IO.puts("Context: #{inspect(TogglrSdk.RequestContext.to_map(context))}")
 
-    feature_key = "advanced_analytics"
+    feature_key = "new_ui"
 
     # Evaluate feature
     IO.puts("\n=== Feature Evaluation ===")

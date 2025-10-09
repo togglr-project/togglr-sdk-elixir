@@ -1,4 +1,4 @@
-.PHONY: install generate test lint format clean docs run-example-simple run-example-advanced
+.PHONY: install generate post-generate test lint format clean docs run-example-simple run-example-advanced regenerate
 
 # Install dependencies
 install:
@@ -13,12 +13,25 @@ generate:
 			-i specs/sdk.yml \
 			-o internal/generated \
 			--additional-properties=packageName=TogglrSdk.Generated,packageVersion=1.0.0; \
+		echo "Copying generated files to lib/sdkapi..."; \
+		rm -rf lib/sdkapi/; \
+		mkdir -p lib/sdkapi/; \
+		cp -r internal/generated/lib/sdkapi/* lib/sdkapi/; \
+		echo "Applying necessary modifications..."; \
+		$(MAKE) post-generate; \
+		echo "Cleaning up temporary files..."; \
+		rm -rf internal/generated/; \
+		echo "Generation complete!"; \
 	else \
 		echo "openapi-generator-cli not found. Please install it first:"; \
 		echo "  npm install -g @openapitools/openapi-generator-cli"; \
 		echo "  or"; \
 		echo "  brew install openapi-generator"; \
 	fi
+
+# Apply post-generation modifications
+post-generate:
+	@./scripts/post-generate.sh
 
 # Run tests
 test:
@@ -39,6 +52,7 @@ clean:
 	rm -rf _build/
 	rm -rf deps/
 	rm -rf internal/generated/
+	rm -rf generated/
 
 # Generate documentation
 docs:
@@ -59,3 +73,7 @@ run-example-simple:
 # Run advanced example
 run-example-advanced:
 	mix run examples/advanced_example.exs
+
+# Full regeneration (clean + generate)
+regenerate: clean generate
+	@echo "Full regeneration complete!"
