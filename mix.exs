@@ -10,7 +10,8 @@ defmodule TogglrSdk.MixProject do
       deps: deps(),
       description: description(),
       package: package(),
-      source_url: "https://github.com/togglr/togglr-sdk-elixir",
+      source_url: "https://github.com/togglr-project/togglr-sdk-elixir",
+      homepage_url: "https://github.com/togglr-project/togglr-sdk-elixir",
       docs: [
         main: "TogglrSdk",
         extras: ["README.md"]
