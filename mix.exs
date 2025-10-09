@@ -47,7 +47,7 @@ defmodule TogglrSdk.MixProject do
       maintainers: ["Togglr Team"],
       licenses: ["MIT"],
       links: %{
-        "GitHub" => "https://github.com/togglr/togglr-sdk-elixir",
+        "GitHub" => "https://github.com/togglr-project/togglr-sdk-elixir",
         "Documentation" => "https://hexdocs.pm/togglr_sdk"
       }
     ]
