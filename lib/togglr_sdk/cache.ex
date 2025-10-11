@@ -116,7 +116,6 @@ defmodule TogglrSdk.Cache do
 
   @impl true
   def init({cache_name, max_size, ttl}) do
-    # Create the cache with Cachex
     case Cachex.start_link(cache_name, [limit: max_size, ttl: ttl * 1000]) do
       {:ok, _pid} ->
         state = %__MODULE__{
@@ -139,7 +138,6 @@ defmodule TogglrSdk.Cache do
         {:reply, nil, state}
 
       {:ok, entry} ->
-        # Add timestamp if not present
         entry_with_timestamp = Map.put_new(entry, :timestamp, System.system_time(:second))
         {:reply, entry_with_timestamp, state}
 

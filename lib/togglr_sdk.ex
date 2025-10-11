@@ -97,8 +97,6 @@ defmodule TogglrSdk do
   @doc """
   Creates a new client with default configuration.
 
-  This is a convenience function that creates a client with default settings.
-
   ## Parameters
 
   - `api_key`: Your Togglr API key
@@ -109,7 +107,6 @@ defmodule TogglrSdk do
 
   """
   def new_client(api_key) when is_binary(api_key) do
-    # Setup protocol derivations for generated models
     TogglrSdk.ProtocolDerivations.setup()
 
     config = TogglrSdk.Config.default(api_key)
@@ -152,7 +149,6 @@ defmodule TogglrSdk do
 
   """
   def new_client(api_key, opts) when is_binary(api_key) and is_list(opts) do
-    # Setup protocol derivations for generated models
     TogglrSdk.ProtocolDerivations.setup()
 
     config = TogglrSdk.Config.default(api_key)
@@ -169,8 +165,6 @@ defmodule TogglrSdk do
 
     TogglrSdk.Client.new(config)
   end
-
-  # Private helper functions
 
   defp maybe_apply_opt(config, opts, key, fun) do
     case Keyword.get(opts, key) do
@@ -189,7 +183,5 @@ defmodule TogglrSdk do
     end
   end
 
-  # Re-export models for convenience
-  # alias TogglrSdk.Models.{ErrorReport, FeatureHealth}
 
 end

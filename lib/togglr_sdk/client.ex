@@ -9,7 +9,6 @@ defmodule TogglrSdk.Client do
   require Logger
 
   alias TogglrSdk.{Config, RequestContext, Cache, BackoffConfig}
-  # Generated API client
   alias SDKAPI.Api.Default, as: ApiClient
   alias SDKAPI.Model.FeatureErrorReport
 
@@ -40,7 +39,6 @@ defmodule TogglrSdk.Client do
 
   """
   def new(%Config{} = config) do
-    # Start cache if enabled
     cache = if config.cache_enabled do
       case Cache.start_link(config.cache_max_size, config.cache_ttl) do
         {:ok, pid} -> pid
@@ -191,16 +189,15 @@ defmodule TogglrSdk.Client do
 
   # Private functions
 
-defp create_tesla_client(config) do
-  middleware = [
-    {Tesla.Middleware.BaseUrl, config.base_url},
-    {Tesla.Middleware.Headers, [{"Authorization", config.api_key}]},
-    {Tesla.Middleware.JSON, engine: Jason},
-    {Tesla.Middleware.Timeout, timeout: config.timeout}
-  ]
+  defp create_tesla_client(config) do
+    middleware = [
+      {Tesla.Middleware.BaseUrl, config.base_url},
+      {Tesla.Middleware.Headers, [{"Authorization", config.api_key}]},
+      {Tesla.Middleware.JSON, engine: Jason},
+      {Tesla.Middleware.Timeout, timeout: config.timeout}
+    ]
 
-  # Build SSL options for Hackney adapter
-  ssl_options = build_ssl_options(config)
+    ssl_options = build_ssl_options(config)
 
   adapter_opts =
     if config.insecure do
@@ -212,11 +209,9 @@ defp create_tesla_client(config) do
   Tesla.client(middleware, {Tesla.Adapter.Hackney, adapter_opts})
 end
 
-# Private function to build SSL options for Hackney
 defp build_ssl_options(config) do
   ssl_opts = []
 
-  # Add client certificate and key if provided
   ssl_opts =
     if config.client_cert && config.client_key do
       ssl_opts ++ [certfile: config.client_cert, keyfile: config.client_key]
@@ -224,7 +219,6 @@ defp build_ssl_options(config) do
       ssl_opts
     end
 
-  # Add CA certificate if provided
   ssl_opts =
     if config.ca_cert do
       ssl_opts ++ [cacertfile: config.ca_cert]
@@ -232,7 +226,6 @@ defp build_ssl_options(config) do
       ssl_opts
     end
 
-  # Return SSL options if any are configured
   if ssl_opts != [] do
     [ssl_options: ssl_opts]
   else
@@ -260,7 +253,6 @@ end
   end
 
   defp evaluate_single(client, feature_key, context) do
-    # Check cache first
     cache_key = get_cache_key(feature_key, context)
     cached_result = if client.cache, do: Cache.get(cache_key), else: nil
 
@@ -268,7 +260,6 @@ end
       log(client, :debug, "Cache hit", %{feature_key: feature_key, cache_key: cache_key})
       cached_result
     else
-      # Make API request using generated client
       request_body = RequestContext.to_map(context)
 
       case ApiClient.sdk_v1_features_feature_key_evaluate_post(client.tesla_client, feature_key, request_body) do
@@ -279,7 +270,6 @@ end
             found: true
           }
 
-          # Cache the result
           if client.cache do
             Cache.put(cache_key, result)
           end
@@ -432,8 +422,6 @@ end
     end
   end
 
-  # Private methods for error reporting
-
   defp report_error_with_retries(client, feature_key, error_type, error_message, context) do
     error_report = TogglrSdk.Models.ErrorReport.new(error_type, error_message, context)
 
@@ -443,7 +431,7 @@ end
   defp report_error_with_retries(client, feature_key, error_report, attempt) do
     try do
       report_error_single(client, feature_key, error_report)
-      :ok # Success
+      :ok
     rescue
       e in [TogglrSdk.Exceptions.TogglrException] ->
         if attempt < client.config.retries and should_retry?(e) do
@@ -457,7 +445,6 @@ end
   end
 
   defp report_error_single(client, feature_key, error_report) do
-    # Convert our ErrorReport to generated FeatureErrorReport
     api_error_report = %FeatureErrorReport{
       error_type: error_report.error_type,
       error_message: error_report.error_message,
@@ -466,7 +453,6 @@ end
 
     case ApiClient.report_feature_error(client.tesla_client, feature_key, api_error_report) do
       {:ok, _} ->
-        # Success - error queued for processing
         :ok
 
       {:error, %Tesla.Env{status: 401}} ->
@@ -488,8 +474,6 @@ end
         raise TogglrSdk.Exceptions.TogglrException, "Request failed: #{inspect(reason)}"
     end
   end
-
-  # Private methods for feature health
 
   defp get_feature_health_with_retries(client, feature_key) do
     get_feature_health_with_retries(client, feature_key, 0)
@@ -513,7 +497,6 @@ end
   defp get_feature_health_single(client, feature_key) do
     case ApiClient.get_feature_health(client.tesla_client, feature_key) do
       {:ok, api_health} ->
-        # Convert generated FeatureHealth to our FeatureHealth
         convert_feature_health(api_health)
 
       {:error, %Tesla.Env{status: 401}} ->
