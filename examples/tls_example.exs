@@ -14,14 +14,26 @@
   retries: 3
 ])
 
-# Build request context
+# Build request context with comprehensive user information
 context = TogglrSdk.RequestContext.new()
 |> TogglrSdk.RequestContext.with_user_id("user123")
-|> TogglrSdk.RequestContext.with_country("US")
 |> TogglrSdk.RequestContext.with_user_email("user@example.com")
+|> TogglrSdk.RequestContext.with_country("US")
+|> TogglrSdk.RequestContext.with_region("us-west")
+|> TogglrSdk.RequestContext.with_city("San Francisco")
 |> TogglrSdk.RequestContext.with_device_type("mobile")
+|> TogglrSdk.RequestContext.with_manufacturer("Apple")
 |> TogglrSdk.RequestContext.with_os("iOS")
 |> TogglrSdk.RequestContext.with_os_version("15.0")
+|> TogglrSdk.RequestContext.with_browser("Safari")
+|> TogglrSdk.RequestContext.with_browser_version("15.0")
+|> TogglrSdk.RequestContext.with_language("en-US")
+|> TogglrSdk.RequestContext.with_connection_type("wifi")
+|> TogglrSdk.RequestContext.with_age(28)
+|> TogglrSdk.RequestContext.with_gender("female")
+|> TogglrSdk.RequestContext.with_ip("192.168.1.100")
+|> TogglrSdk.RequestContext.with_app_version("2.1.0")
+|> TogglrSdk.RequestContext.with_platform("ios")
 
 # Evaluate a feature
 feature_key = "new_ui"

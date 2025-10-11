@@ -156,19 +156,83 @@ Available TLS configuration methods:
 
 ### Request Context
 
-The request context allows you to provide user attributes and other data for feature evaluation:
+The request context allows you to provide user attributes and other data for feature evaluation. The SDK provides many convenient `with_*` methods for common attributes:
 
 ```elixir
+# Basic user information
 context = TogglrSdk.RequestContext.new()
 |> TogglrSdk.RequestContext.with_user_id("123")
+|> TogglrSdk.RequestContext.with_user_email("user@example.com")
+|> TogglrSdk.RequestContext.with_anonymous(false)
+
+# Location information
 |> TogglrSdk.RequestContext.with_country("US")
+|> TogglrSdk.RequestContext.with_region("us-west")
+|> TogglrSdk.RequestContext.with_city("San Francisco")
+
+# Device information
+|> TogglrSdk.RequestContext.with_device_type("mobile")
+|> TogglrSdk.RequestContext.with_manufacturer("Apple")
+|> TogglrSdk.RequestContext.with_os("iOS")
+|> TogglrSdk.RequestContext.with_os_version("15.0")
+
+# Browser information
+|> TogglrSdk.RequestContext.with_browser("Safari")
+|> TogglrSdk.RequestContext.with_browser_version("15.0")
+
+# User demographics
+|> TogglrSdk.RequestContext.with_age(25)
+|> TogglrSdk.RequestContext.with_gender("female")
+
+# Technical details
+|> TogglrSdk.RequestContext.with_language("en-US")
+|> TogglrSdk.RequestContext.with_connection_type("wifi")
+|> TogglrSdk.RequestContext.with_ip("192.168.1.1")
+|> TogglrSdk.RequestContext.with_app_version("1.2.3")
+|> TogglrSdk.RequestContext.with_platform("ios")
+
+# Custom attributes
 |> TogglrSdk.RequestContext.set("plan", "premium")
-|> TogglrSdk.RequestContext.set("region", "us-west")
 |> TogglrSdk.RequestContext.set_many(%{
   "user.role" => "admin",
   "user.team" => "engineering"
 })
 ```
+
+#### Available Context Methods
+
+**User Information:**
+- `with_user_id/2` - Set user ID
+- `with_user_email/2` - Set user email
+- `with_anonymous/2` - Set anonymous flag
+- `with_age/2` - Set user age
+- `with_gender/2` - Set user gender
+
+**Location Information:**
+- `with_country/2` - Set country code
+- `with_region/2` - Set region
+- `with_city/2` - Set city
+- `with_ip/2` - Set IP address
+
+**Device Information:**
+- `with_device_type/2` - Set device type (mobile, desktop, tablet)
+- `with_manufacturer/2` - Set device manufacturer
+- `with_os/2` - Set operating system
+- `with_os_version/2` - Set OS version
+- `with_platform/2` - Set platform
+
+**Browser Information:**
+- `with_browser/2` - Set browser name
+- `with_browser_version/2` - Set browser version
+
+**Technical Details:**
+- `with_language/2` - Set language code
+- `with_connection_type/2` - Set connection type
+- `with_app_version/2` - Set application version
+
+**Custom Attributes:**
+- `set/3` - Set custom key-value pair
+- `set_many/2` - Set multiple custom attributes
 
 ### Feature Evaluation
 
