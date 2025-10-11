@@ -70,6 +70,10 @@ build: test lint
 run-example-simple:
 	mix run examples/simple_example.exs
 
+# Run TLS example
+run-example-tls:
+	mix run examples/tls_example.exs
+
 # Run advanced example
 run-example-advanced:
 	mix run examples/advanced_example.exs

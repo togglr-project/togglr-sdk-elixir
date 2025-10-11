@@ -199,14 +199,45 @@ defp create_tesla_client(config) do
     {Tesla.Middleware.Timeout, timeout: config.timeout}
   ]
 
+  # Build SSL options for Hackney adapter
+  ssl_options = build_ssl_options(config)
+
   adapter_opts =
     if config.insecure do
-      [insecure: true]
+      [insecure: true] ++ ssl_options
     else
-      []
+      ssl_options
     end
 
   Tesla.client(middleware, {Tesla.Adapter.Hackney, adapter_opts})
+end
+
+# Private function to build SSL options for Hackney
+defp build_ssl_options(config) do
+  ssl_opts = []
+
+  # Add client certificate and key if provided
+  ssl_opts =
+    if config.client_cert && config.client_key do
+      ssl_opts ++ [certfile: config.client_cert, keyfile: config.client_key]
+    else
+      ssl_opts
+    end
+
+  # Add CA certificate if provided
+  ssl_opts =
+    if config.ca_cert do
+      ssl_opts ++ [cacertfile: config.ca_cert]
+    else
+      ssl_opts
+    end
+
+  # Return SSL options if any are configured
+  if ssl_opts != [] do
+    [ssl_options: ssl_opts]
+  else
+    []
+  end
 end
 
   defp evaluate_with_retries(client, feature_key, context) do

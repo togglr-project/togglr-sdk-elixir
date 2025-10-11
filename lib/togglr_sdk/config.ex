@@ -16,7 +16,10 @@ defmodule TogglrSdk.Config do
     :cache_ttl,
     :backoff_config,
     :logger,
-    :insecure
+    :insecure,
+    :client_cert,
+    :client_key,
+    :ca_cert
   ]
 
   @type t :: %__MODULE__{
@@ -29,7 +32,10 @@ defmodule TogglrSdk.Config do
           cache_ttl: non_neg_integer(),
           backoff_config: TogglrSdk.BackoffConfig.t(),
           logger: module(),
-          insecure: boolean()
+          insecure: boolean(),
+          client_cert: String.t() | nil,
+          client_key: String.t() | nil,
+          ca_cert: String.t() | nil
         }
 
   @doc """
@@ -53,7 +59,10 @@ defmodule TogglrSdk.Config do
       cache_ttl: 60,
       backoff_config: TogglrSdk.BackoffConfig.default(),
       logger: Logger,
-      insecure: false
+      insecure: false,
+      client_cert: nil,
+      client_key: nil,
+      ca_cert: nil
     }
   end
 
@@ -163,5 +172,62 @@ defmodule TogglrSdk.Config do
     else
       config
     end
+  end
+
+  @doc """
+  Sets the client certificate file path.
+
+  ## Examples
+
+      iex> config = TogglrSdk.Config.default("key") |> TogglrSdk.Config.with_client_cert("/path/to/client.crt")
+      iex> config.client_cert
+      "/path/to/client.crt"
+
+  """
+  def with_client_cert(%__MODULE__{} = config, cert_path) when is_binary(cert_path) do
+    %{config | client_cert: cert_path}
+  end
+
+  @doc """
+  Sets the client private key file path.
+
+  ## Examples
+
+      iex> config = TogglrSdk.Config.default("key") |> TogglrSdk.Config.with_client_key("/path/to/client.key")
+      iex> config.client_key
+      "/path/to/client.key"
+
+  """
+  def with_client_key(%__MODULE__{} = config, key_path) when is_binary(key_path) do
+    %{config | client_key: key_path}
+  end
+
+  @doc """
+  Sets the CA certificate file path.
+
+  ## Examples
+
+      iex> config = TogglrSdk.Config.default("key") |> TogglrSdk.Config.with_ca_cert("/path/to/ca.crt")
+      iex> config.ca_cert
+      "/path/to/ca.crt"
+
+  """
+  def with_ca_cert(%__MODULE__{} = config, ca_path) when is_binary(ca_path) do
+    %{config | ca_cert: ca_path}
+  end
+
+  @doc """
+  Sets both client certificate and key file paths.
+
+  ## Examples
+
+      iex> config = TogglrSdk.Config.default("key") |> TogglrSdk.Config.with_client_cert_and_key("/path/to/client.crt", "/path/to/client.key")
+      iex> {config.client_cert, config.client_key}
+      {"/path/to/client.crt", "/path/to/client.key"}
+
+  """
+  def with_client_cert_and_key(%__MODULE__{} = config, cert_path, key_path)
+      when is_binary(cert_path) and is_binary(key_path) do
+    %{config | client_cert: cert_path, client_key: key_path}
   end
 end

@@ -133,6 +133,10 @@ defmodule TogglrSdk do
   - `:cache_max_size` - Maximum cache size (default: 1000)
   - `:cache_ttl` - Cache TTL in seconds (default: 60)
   - `:logger` - Logger module (default: Logger)
+  - `:insecure` - Skip SSL verification (default: false)
+  - `:client_cert` - Path to client certificate file
+  - `:client_key` - Path to client private key file
+  - `:ca_cert` - Path to CA certificate file
 
   ## Examples
 
@@ -159,6 +163,9 @@ defmodule TogglrSdk do
     |> maybe_apply_opt(opts, :backoff_config, &TogglrSdk.Config.with_backoff/2)
     |> maybe_apply_opt(opts, :logger, &TogglrSdk.Config.with_logger/2)
     |> maybe_apply_opt(opts, :insecure, &TogglrSdk.Config.with_insecure_value/2)
+    |> maybe_apply_opt(opts, :client_cert, &TogglrSdk.Config.with_client_cert/2)
+    |> maybe_apply_opt(opts, :client_key, &TogglrSdk.Config.with_client_key/2)
+    |> maybe_apply_opt(opts, :ca_cert, &TogglrSdk.Config.with_ca_cert/2)
 
     TogglrSdk.Client.new(config)
   end

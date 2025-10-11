@@ -99,6 +99,58 @@ config = TogglrSdk.Config.default("your-api-key")
 - `cache_max_size` - Maximum number of entries in cache (default: 1000)
 - `cache_ttl` - Cache TTL in seconds (default: 60)
 - `logger` - Logger module (default: Logger)
+- `insecure` - Skip SSL verification (default: false)
+- `client_cert` - Path to client certificate file
+- `client_key` - Path to client private key file
+- `ca_cert` - Path to CA certificate file
+
+### TLS Configuration
+
+The SDK supports TLS client certificates and custom CA certificates for secure connections:
+
+```elixir
+# Basic TLS with client certificate
+{:ok, client} = TogglrSdk.new_client("your-api-key", [
+  base_url: "https://api.togglr.com",
+  client_cert: "/path/to/client.crt",
+  client_key: "/path/to/client.key"
+])
+
+# TLS with custom CA certificate
+{:ok, client} = TogglrSdk.new_client("your-api-key", [
+  base_url: "https://api.togglr.com",
+  ca_cert: "/path/to/ca.crt"
+])
+
+# Full TLS configuration
+{:ok, client} = TogglrSdk.new_client("your-api-key", [
+  base_url: "https://api.togglr.com",
+  client_cert: "/path/to/client.crt",
+  client_key: "/path/to/client.key",
+  ca_cert: "/path/to/ca.crt"
+])
+
+# Using configuration builder pattern
+config = TogglrSdk.Config.default("your-api-key")
+|> TogglrSdk.Config.with_base_url("https://api.togglr.com")
+|> TogglrSdk.Config.with_client_cert_and_key("/path/to/client.crt", "/path/to/client.key")
+|> TogglrSdk.Config.with_ca_cert("/path/to/ca.crt")
+
+{:ok, client} = TogglrSdk.Client.new(config)
+
+# Insecure mode (skip TLS verification) - use with caution
+{:ok, client} = TogglrSdk.new_client("your-api-key", [
+  base_url: "https://api.togglr.com",
+  insecure: true
+])
+```
+
+Available TLS configuration methods:
+- `TogglrSdk.Config.with_client_cert/2` - Set client certificate file path
+- `TogglrSdk.Config.with_client_key/2` - Set client private key file path  
+- `TogglrSdk.Config.with_client_cert_and_key/3` - Set both client certificate and key
+- `TogglrSdk.Config.with_ca_cert/2` - Set CA certificate file path for server verification
+- `TogglrSdk.Config.with_insecure/1` - Skip TLS verification (not recommended for production)
 
 ## Usage
 
@@ -388,12 +440,13 @@ See the `examples/` directory for complete examples:
 
 - `simple_example.exs` - Basic usage example
 - `advanced_example.exs` - Advanced configuration and error handling
+- `tls_example.exs` - TLS certificate configuration example
 
 Run examples with:
 
 ```bash
 elixir examples/simple_example.exs
-elixir examples/advanced_example.exs
+elixir examples/tls_example.exs
 ```
 
 ## Requirements
