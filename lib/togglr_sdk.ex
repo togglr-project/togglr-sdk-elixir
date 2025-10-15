@@ -183,5 +183,35 @@ defmodule TogglrSdk do
     end
   end
 
+  @doc """
+  Creates a new track event.
+
+  ## Parameters
+
+  - `variant_key`: The variant key that was evaluated
+  - `event_type`: Type of event (:success, :failure, :error)
+  - `opts`: Optional parameters
+
+  ## Options
+
+  - `:reward` - Optional reward value
+  - `:context` - Additional context data (default: %{})
+  - `:created_at` - When the event occurred (default: DateTime.utc_now())
+  - `:dedup_key` - Deduplication key to prevent duplicate events
+
+  ## Examples
+
+      iex> TogglrSdk.new_track_event("A", :success)
+      %TogglrSdk.Models.TrackEvent{variant_key: "A", event_type: :success, context: %TogglrSdk.RequestContext{data: %{}}, created_at: nil, dedup_key: nil, reward: nil}
+
+      iex> context = TogglrSdk.RequestContext.new() |> TogglrSdk.RequestContext.with_user_id("123")
+      iex> TogglrSdk.new_track_event("A", :success, reward: 1.0, context: context)
+      %TogglrSdk.Models.TrackEvent{variant_key: "A", event_type: :success, reward: 1.0, context: context, created_at: nil, dedup_key: nil}
+
+  """
+  def new_track_event(variant_key, event_type, opts \\ []) do
+    TogglrSdk.Models.TrackEvent.new(variant_key, event_type, opts)
+  end
+
 
 end

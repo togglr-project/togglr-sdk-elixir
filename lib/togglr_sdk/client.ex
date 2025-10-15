@@ -9,6 +9,7 @@ defmodule TogglrSdk.Client do
   require Logger
 
   alias TogglrSdk.{Config, RequestContext, Cache, BackoffConfig}
+  alias TogglrSdk.Models.TrackEvent
   alias SDKAPI.Api.Default, as: ApiClient
   alias SDKAPI.Model.FeatureErrorReport
 
@@ -422,6 +423,36 @@ end
     end
   end
 
+  @doc """
+  Tracks an event for analytics.
+
+  ## Parameters
+
+  - `feature_key`: The feature key to track an event for
+  - `event`: The track event to send
+
+  ## Returns
+
+  - `:ok` - Success, event queued for processing
+  - `{:error, reason}` - Error occurred
+
+  ## Examples
+
+      iex> event = TogglrSdk.Models.TrackEvent.new("A", :success)
+      iex> :ok = client.track_event("feature_key", event)
+      :ok
+
+  """
+  def track_event(%__MODULE__{} = client, feature_key, %TrackEvent{} = event) do
+    try do
+      track_event_with_retries(client, feature_key, event)
+      :ok
+    rescue
+      e in [TogglrSdk.Exceptions.TogglrException] ->
+        {:error, e}
+    end
+  end
+
   defp report_error_with_retries(client, feature_key, error_type, error_message, context) do
     error_report = TogglrSdk.Models.ErrorReport.new(error_type, error_message, context)
 
@@ -529,5 +560,52 @@ end
       threshold: api_health.threshold || 0,
       last_error_at: api_health.last_error_at
     )
+  end
+
+  defp track_event_with_retries(client, feature_key, event) do
+    track_event_with_retries(client, feature_key, event, 0)
+  end
+
+  defp track_event_with_retries(client, feature_key, event, attempt) do
+    try do
+      track_event_single(client, feature_key, event)
+      :ok
+    rescue
+      e in [TogglrSdk.Exceptions.TogglrException] ->
+        if attempt < client.config.retries and should_retry?(e) do
+          delay = TogglrSdk.BackoffConfig.calculate_delay(client.config.backoff_config, attempt + 1)
+          Process.sleep(trunc(delay * 1000))
+          track_event_with_retries(client, feature_key, event, attempt + 1)
+        else
+          reraise e, __STACKTRACE__
+        end
+    end
+  end
+
+  defp track_event_single(client, feature_key, event) do
+    track_request = TrackEvent.to_map(event)
+
+    case ApiClient.track_feature_event(client.tesla_client, feature_key, track_request) do
+      {:ok, _} ->
+        :ok
+
+      {:error, %Tesla.Env{status: 401}} ->
+        raise TogglrSdk.Exceptions.UnauthorizedException
+
+      {:error, %Tesla.Env{status: 400}} ->
+        raise TogglrSdk.Exceptions.BadRequestException
+
+      {:error, %Tesla.Env{status: 404}} ->
+        raise TogglrSdk.Exceptions.FeatureNotFoundException.exception(feature_key)
+
+      {:error, %Tesla.Env{status: 500}} ->
+        raise TogglrSdk.Exceptions.InternalServerException
+
+      {:error, %Tesla.Env{status: status}} ->
+        raise TogglrSdk.Exceptions.TogglrException, "HTTP #{status}"
+
+      {:error, reason} ->
+        raise TogglrSdk.Exceptions.TogglrException, "Request failed: #{inspect(reason)}"
+    end
   end
 end
