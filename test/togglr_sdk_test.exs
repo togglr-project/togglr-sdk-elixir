@@ -2,9 +2,15 @@ defmodule TogglrSdkTest do
   use ExUnit.Case
   doctest TogglrSdk
 
+  setup do
+    # Clean up any existing cache processes
+    :ok
+  end
+
   test "creates a new client with default configuration" do
     assert {:ok, client} = TogglrSdk.new_client("test-api-key")
     assert is_pid(client.cache)
+    TogglrSdk.Client.close(client)
   end
 
   test "creates a new client with custom options" do
@@ -21,5 +27,6 @@ defmodule TogglrSdkTest do
     assert client.config.base_url == "https://api.example.com"
     assert client.config.timeout == 60000
     assert client.config.retries == 5
+    TogglrSdk.Client.close(client)
   end
 end

@@ -64,6 +64,87 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /sdk/v1/features/{feature_key}/track:
+    post:
+      summary: Track event for a feature (impression / conversion / error / custom)
+      description: |
+        Send a feedback event related to a feature evaluation. Events are written to TimescaleDB
+        (hypertable) and used for analytics, auto-disable and training MAB algorithms.
+        The project is derived from the API key.
+      operationId: TrackFeatureEvent
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: feature_key
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackRequest'
+            examples:
+              success:
+                summary: Impression example
+                value:
+                  variant_key: "A"
+                  event_type: "success"
+                  reward: 0
+                  context:
+                    user.id: "123"
+                    country: "RU"
+              error:
+                summary: Error reporting via /track
+                value:
+                  variant_key: "B"
+                  event_type: "error"
+                  reward: 0
+                  context:
+                    error_type: "timeout"
+                    error_message: "service X timed out"
+      responses:
+        '202':
+          description: Event accepted for processing
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBadRequest'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorUnauthorized'
+        '404':
+          description: Feature not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorNotFound'
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorTooManyRequests'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInternalServerError'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /sdk/v1/health:
     get:
       summary: Health check for SDK server
@@ -318,3 +399,35 @@ components:
           type: string
           format: date-time
       required: [feature_key, environment_key, enabled, auto_disabled]
+
+    TrackRequest:
+      type: object
+      description: |
+        Event sent from SDK. SDK SHOULD send an impression event for each evaluation (recommended).
+        Conversions / errors / custom events are used to update algorithm statistics.
+      properties:
+        variant_key:
+          type: string
+          description: Variant key returned by evaluate (e.g. "A", "v2").
+        event_type:
+          type: string
+          enum: [success, failure, error]
+          description: Type of event (e.g. "success", "failure", "error").
+        reward:
+          type: number
+          format: float
+          description: Numeric reward associated with event (e.g. 1.0 for conversion). Default 0.
+        context:
+          type: object
+          additionalProperties: true
+          description: Arbitrary context passed by SDK (user id, session, metadata).
+        created_at:
+          type: string
+          format: date-time
+          description: Event timestamp. If omitted, server time will be used.
+        dedup_key:
+          type: string
+          description: Optional idempotency key to deduplicate duplicate events from SDK retries.
+      required:
+        - event_type
+        - variant_key

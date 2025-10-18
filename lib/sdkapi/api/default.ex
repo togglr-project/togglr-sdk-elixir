@@ -144,4 +144,42 @@ defmodule SDKAPI.Api.Default do
       {:default, false}
     ])
   end
+
+  @doc """
+  Track event for a feature (impression / conversion / error / custom)
+  Send a feedback event related to a feature evaluation. Events are written to TimescaleDB (hypertable) and used for analytics, auto-disable and training MAB algorithms. The project is derived from the API key. 
+
+  ### Parameters
+
+  - `connection` (SDKAPI.Connection): Connection to server
+  - `feature_key` (String.t): 
+  - `track_request` (TrackRequest): 
+  - `opts` (keyword): Optional parameters
+
+  ### Returns
+
+  - `{:ok, nil}` on success
+  - `{:error, Tesla.Env.t}` on failure
+  """
+  @spec track_feature_event(Tesla.Env.client, String.t, SDKAPI.Model.TrackRequest.t, keyword()) :: {:ok, nil} | {:ok, SDKAPI.Model.ErrorUnauthorized.t} | {:ok, SDKAPI.Model.ErrorTooManyRequests.t} | {:ok, SDKAPI.Model.Error.t} | {:ok, SDKAPI.Model.ErrorBadRequest.t} | {:ok, SDKAPI.Model.ErrorInternalServerError.t} | {:ok, SDKAPI.Model.ErrorNotFound.t} | {:error, Tesla.Env.t}
+  def track_feature_event(connection, feature_key, track_request, _opts \\ []) do
+    request =
+      %{}
+      |> method(:post)
+      |> url("/sdk/v1/features/#{feature_key}/track")
+      |> add_param(:body, :body, track_request)
+      |> Enum.into([])
+
+    connection
+    |> Connection.request(request)
+    |> evaluate_response([
+      {202, false},
+      {400, SDKAPI.Model.ErrorBadRequest},
+      {401, SDKAPI.Model.ErrorUnauthorized},
+      {404, SDKAPI.Model.ErrorNotFound},
+      {429, SDKAPI.Model.ErrorTooManyRequests},
+      {500, SDKAPI.Model.ErrorInternalServerError},
+      {:default, SDKAPI.Model.Error}
+    ])
+  end
 end

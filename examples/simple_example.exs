@@ -121,6 +121,62 @@ defmodule SimpleExample do
       {:error, reason} ->
         IO.puts("Failed to check feature health: #{inspect(reason)}")
     end
+
+    # Example: Track events for analytics
+    # Track impression event (recommended for each evaluation)
+    impression_context = TogglrSdk.RequestContext.new()
+    |> TogglrSdk.RequestContext.with_user_id("user123")
+    |> TogglrSdk.RequestContext.with_country("US")
+    |> TogglrSdk.RequestContext.with_device_type("mobile")
+
+    impression_event = TogglrSdk.new_track_event("A", :success)
+    |> TogglrSdk.Models.TrackEvent.with_request_context(impression_context)
+    |> TogglrSdk.Models.TrackEvent.with_dedup_key("impression-user123-new_ui")
+
+    case TogglrSdk.Client.track_event(client, "new_ui", impression_event) do
+      :ok ->
+        IO.puts("Impression event tracked successfully")
+
+      {:error, reason} ->
+        IO.puts("Error tracking impression event: #{inspect(reason)}")
+    end
+
+    # Track conversion event with reward
+    conversion_context = TogglrSdk.RequestContext.new()
+    |> TogglrSdk.RequestContext.with_user_id("user123")
+    |> TogglrSdk.RequestContext.set("conversion_type", "purchase")
+    |> TogglrSdk.RequestContext.set("order_value", 99.99)
+
+    conversion_event = TogglrSdk.new_track_event("A", :success)
+    |> TogglrSdk.Models.TrackEvent.with_reward(1.0)
+    |> TogglrSdk.Models.TrackEvent.with_request_context(conversion_context)
+    |> TogglrSdk.Models.TrackEvent.with_dedup_key("conversion-user123-new_ui")
+
+    case TogglrSdk.Client.track_event(client, "new_ui", conversion_event) do
+      :ok ->
+        IO.puts("Conversion event tracked successfully")
+
+      {:error, reason} ->
+        IO.puts("Error tracking conversion event: #{inspect(reason)}")
+    end
+
+    # Track error event
+    error_context = TogglrSdk.RequestContext.new()
+    |> TogglrSdk.RequestContext.with_user_id("user123")
+    |> TogglrSdk.RequestContext.set("error_type", "timeout")
+    |> TogglrSdk.RequestContext.set("error_message", "Service did not respond in 5s")
+
+    error_event = TogglrSdk.new_track_event("B", :error)
+    |> TogglrSdk.Models.TrackEvent.with_request_context(error_context)
+    |> TogglrSdk.Models.TrackEvent.with_dedup_key("error-user123-new_ui")
+
+    case TogglrSdk.Client.track_event(client, "new_ui", error_event) do
+      :ok ->
+        IO.puts("Error event tracked successfully")
+
+      {:error, reason} ->
+        IO.puts("Error tracking error event: #{inspect(reason)}")
+    end
   end
 end
 
